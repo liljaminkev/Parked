@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Parked</string>
+    <string name="findMyLocation">Find My Location</string>
+    <string name="title_activity_maps">Map</string>
+</resources>
