@@ -36,11 +36,13 @@ import static com.parked.parked.R.string.findMyLocation;
  * Created by kevin on 5/7/17.
  */
 
-public class NavFragment extends SupportMapFragment {
+public class NavFragment extends SupportMapFragment implements LocationListener{
 
     private GoogleMap mMap;
     private Location mCurrentLocation;
+    private Boolean mLocationPermissionGranted;
     private GoogleApiClient mClient;
+    private LatLng latlng;
     private static final String TAG = "NavFragment";
     private static final int REQUEST_LOCATION_PERMISSIONS = 0;
 
@@ -67,6 +69,7 @@ public class NavFragment extends SupportMapFragment {
                     @Override
                     public void onConnected(Bundle bundle) {
                         getActivity().invalidateOptionsMenu();
+                        startLocationUpdates();
                     }
 
                     @Override
@@ -79,7 +82,7 @@ public class NavFragment extends SupportMapFragment {
             @Override
             public void onMapReady(GoogleMap googleMap) {
                 mMap = googleMap;
-                updateUI();
+                mMap.setMyLocationEnabled(true);
             }
 
         });
@@ -98,6 +101,20 @@ public class NavFragment extends SupportMapFragment {
     public void onStop() {
         super.onStop();
         mClient.disconnect();
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        stopLocationUpdates();
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        if (mClient.isConnected()) {
+            startLocationUpdates();
+        }
     }
 
 
@@ -120,8 +137,10 @@ public class NavFragment extends SupportMapFragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_locate:
-                if (hasLocationPermission())
+                if (hasLocationPermission()){
                     findLocation();
+                    updateUI();
+                }
                 else
                     requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
                 return true;
@@ -138,10 +157,14 @@ public class NavFragment extends SupportMapFragment {
     //
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantedResults) {
-        if (hasLocationPermission()) {
-            findLocation();
-        } else
-            super.onRequestPermissionsResult(requestCode, permissions, grantedResults);
+        switch (requestCode) {
+            case REQUEST_LOCATION_PERMISSIONS:
+                if (hasLocationPermission()) {
+                    findLocation();
+                }
+            default:
+                super.onRequestPermissionsResult(requestCode, permissions, grantedResults);
+        }
     }
 
     private boolean hasLocationPermission(){
@@ -152,21 +175,18 @@ public class NavFragment extends SupportMapFragment {
 
 
     private void findLocation() {
-        LocationRequest request = LocationRequest.create();
-        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        request.setNumUpdates(1);
-        request.setInterval(0);
 
-        LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-                Log.i(TAG, "Got a fix: " + location);
-                new LocationTask().execute(location);
-            }
-        });
+        if (ContextCompat.checkSelfPermission(getActivity(), LOCATION_PERMISSIONS[0])
+                == PackageManager.PERMISSION_GRANTED) {
+            mLocationPermissionGranted = true;
+        } else {
+            requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
+        }
+
+        if (mLocationPermissionGranted) {
+        mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mClient);
+        }
     }
-
-
 
     private void updateUI(){
         if (mMap == null){
@@ -174,43 +194,39 @@ public class NavFragment extends SupportMapFragment {
         }
 
 
-        /*
-        LatLng myLocation = new LatLng(mCurrentLocation.getLatitude(),
-                mCurrentLocation.getLongitude());
+       // LatLng myLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
 
-        LatLngBounds bounds = new LatLngBounds.Builder().include(myLocation).build();
+        //LatLngBounds bounds = new LatLngBounds.Builder().include(myLocation).build();
 
-        int margin = getResources().getDimensionPixelSize(R.dimen.map_inset_margin);
+        //int margin = getResources().getDimensionPixelSize(R.dimen.map_inset_margin);
 
-        */
 
-        LatLng sanFran = new LatLng(38.009270, -121.962937);
 
-        mMap.addMarker(new MarkerOptions().position(sanFran).title("here"));
-        CameraUpdate update = CameraUpdateFactory.newLatLng(sanFran);
-        mMap.animateCamera(update);
+        //LatLng sanFran = new LatLng(38.009270, -121.962937);
+        LatLng sanFran = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+
+        //mMap.addMarker(new MarkerOptions().position(sanFran).title("here"));
+        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(sanFran,18);
+        mMap.moveCamera(update);
 
     }
 
+    protected void startLocationUpdates() {
+        LocationRequest request = LocationRequest.create();
+        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        request.setInterval(1000);
 
-
-    private class LocationTask extends AsyncTask<Location, Void, Void>{
-
-        private Location mLocation;
-
-        @Override
-        protected Void doInBackground(Location... params)
-        {
-            mLocation = params[0];
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void result){
-            mCurrentLocation = mLocation;
-
-            updateUI();
-        }
+        LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, this);
     }
+
+    protected void stopLocationUpdates() {
+        LocationServices.FusedLocationApi.removeLocationUpdates(mClient, this);
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        mCurrentLocation = location;
+        updateUI();
+    }
+
 }
