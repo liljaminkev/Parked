@@ -42,7 +42,6 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
     private Location mCurrentLocation;
     private Boolean mLocationPermissionGranted;
     private GoogleApiClient mClient;
-    private LatLng latlng;
     private static final String TAG = "NavFragment";
     private static final int REQUEST_LOCATION_PERMISSIONS = 0;
 
@@ -62,14 +61,22 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
+        //setHasOptionsMenu(true);
 
         mClient = new GoogleApiClient.Builder(getActivity()).addApi(LocationServices.API)
                 .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
                     @Override
                     public void onConnected(Bundle bundle) {
-                        getActivity().invalidateOptionsMenu();
+                        //getActivity().invalidateOptionsMenu();
                         startLocationUpdates();
+
+                        if (hasLocationPermission()){
+                            findLocation();
+                            updateUI();
+                        }
+                        else
+                            requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
+
                     }
 
                     @Override
@@ -93,7 +100,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
     public void onStart() {
         super.onStart();
 
-        getActivity().invalidateOptionsMenu();
+        //getActivity().invalidateOptionsMenu();
         mClient.connect();
     }
 
@@ -119,7 +126,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
 
 
 
-    //
+    /*
     //Menu Items
     //
     //
@@ -147,7 +154,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
             default:
                 return super.onOptionsItemSelected(item);
         }
-    }
+    }*/
 
 
 
@@ -184,7 +191,8 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
         }
 
         if (mLocationPermissionGranted) {
-        mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mClient);
+            mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mClient);
+            updateUI();
         }
     }
 
@@ -193,20 +201,10 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
             return;
         }
 
-
-       // LatLng myLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
-
-        //LatLngBounds bounds = new LatLngBounds.Builder().include(myLocation).build();
-
-        //int margin = getResources().getDimensionPixelSize(R.dimen.map_inset_margin);
+        LatLng myLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
 
 
-
-        //LatLng sanFran = new LatLng(38.009270, -121.962937);
-        LatLng sanFran = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
-
-        //mMap.addMarker(new MarkerOptions().position(sanFran).title("here"));
-        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(sanFran,18);
+        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(myLocation,18);
         mMap.moveCamera(update);
 
     }
