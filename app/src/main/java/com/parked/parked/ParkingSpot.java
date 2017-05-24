@@ -4,16 +4,16 @@ package com.parked.parked;
  * Created by kevin on 5/23/17.
  */
 
-public class parkingSpot {
+public class ParkingSpot {
 
     private double mLatitude;
     private double mLongitude;
-    private boolean mStatus;
+    private boolean mTaken;
 
-    public parkingSpot(double latitude, double longitude, boolean status){
+    public ParkingSpot(double latitude, double longitude, boolean status){
         mLatitude = latitude;
         mLongitude = longitude;
-        mStatus = status;
+        mTaken = status;
     }
 
     public double getmLatitude() {
@@ -32,12 +32,12 @@ public class parkingSpot {
         this.mLongitude = mLongitude;
     }
 
-    public boolean ismStatus() {
-        return mStatus;
+    public boolean ismTaken() {
+        return mTaken;
     }
 
     public void setmStatus(boolean mStatus) {
-        this.mStatus = mStatus;
+        this.mTaken = mStatus;
     }
 
 }
