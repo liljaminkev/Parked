@@ -32,11 +32,13 @@ import com.google.android.gms.maps.model.MarkerOptions;
 
 import static com.parked.parked.R.string.findMyLocation;
 
+import java.io.IOException;
+
 /**
  * Created by kevin on 5/7/17.
  */
 
-public class NavFragment extends SupportMapFragment implements LocationListener{
+public class NavFragment extends SupportMapFragment implements LocationListener {
 
     private GoogleMap mMap;
     private Location mCurrentLocation;
@@ -63,6 +65,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
         super.onCreate(savedInstanceState);
         //setHasOptionsMenu(true);
 
+
         mClient = new GoogleApiClient.Builder(getActivity()).addApi(LocationServices.API)
                 .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
                     @Override
@@ -70,11 +73,10 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
                         //getActivity().invalidateOptionsMenu();
                         startLocationUpdates();
 
-                        if (hasLocationPermission()){
+                        if (hasLocationPermission()) {
                             findLocation();
                             updateUI();
-                        }
-                        else
+                        } else
                             requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
 
                     }
@@ -111,13 +113,13 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
     }
 
     @Override
-    public void onPause(){
+    public void onPause() {
         super.onPause();
         stopLocationUpdates();
     }
 
     @Override
-    public void onResume(){
+    public void onResume() {
         super.onResume();
         if (mClient.isConnected()) {
             startLocationUpdates();
@@ -157,7 +159,6 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
     }*/
 
 
-
     //
     //Device permissions
     //
@@ -174,7 +175,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
         }
     }
 
-    private boolean hasLocationPermission(){
+    private boolean hasLocationPermission() {
         int result = ContextCompat.checkSelfPermission(getActivity(), LOCATION_PERMISSIONS[0]);
 
         return result == PackageManager.PERMISSION_GRANTED;
@@ -196,15 +197,15 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
         }
     }
 
-    private void updateUI(){
-        if (mMap == null){
+    private void updateUI() {
+        if (mMap == null) {
             return;
         }
 
         LatLng myLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
 
 
-        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(myLocation,18);
+        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(myLocation, 18);
         mMap.moveCamera(update);
 
     }
@@ -227,11 +228,12 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
         updateUI();
     }
 
-    private class FetchItemsTask extends AsyncTask<Void,Void,Void> {
+
+    private class FetchItemsTask extends AsyncTask<Void, Void, Void> {
         @Override
         protected Void doInBackground(Void... params) {
             try {
-                String result = new FlickrFetchr()
+                String result = new SpotFetcher()
                         .getUrlString("https://www.bignerdranch.com");
                 Log.i(TAG, "Fetched contents of URL: " + result);
             } catch (IOException ioe) {
@@ -241,4 +243,5 @@ public class NavFragment extends SupportMapFragment implements LocationListener{
         }
 
 
+    }
 }
