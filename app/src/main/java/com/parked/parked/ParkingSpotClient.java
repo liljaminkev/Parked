@@ -4,6 +4,9 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.os.AsyncTask;
 
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import org.json.JSONArray;
 
 import java.net.URL;
@@ -18,6 +21,7 @@ import java.util.List;
 
 public class ParkingSpotClient {
     private String myJSONOBJECT;
+
 
     private static final String TAG_RESULTS="result";
     private static final String TAG_PARKED= "parked";
@@ -56,7 +60,6 @@ public class ParkingSpotClient {
 
         return parkingSpots;
     }
-
 
 
     private static ContentValues getContentValues(ParkingSpot spot) {

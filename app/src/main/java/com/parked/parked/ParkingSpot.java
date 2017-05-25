@@ -9,11 +9,15 @@ public class ParkingSpot {
     private double mLatitude;
     private double mLongitude;
     private boolean mTaken;
+    private int mTime;
 
-    public ParkingSpot(double latitude, double longitude, boolean status){
+    public ParkingSpot(){};
+
+    public ParkingSpot(double latitude, double longitude, boolean status, int time){
         mLatitude = latitude;
         mLongitude = longitude;
         mTaken = status;
+        mTime = time;
     }
 
     public double getmLatitude() {
@@ -36,8 +40,17 @@ public class ParkingSpot {
         return mTaken;
     }
 
-    public void setmStatus(boolean mStatus) {
-        this.mTaken = mStatus;
+    public void setmTaken(boolean mTaken) {
+        this.mTaken = mTaken;
     }
+
+    public int getmTime() {
+        return mTime;
+    }
+
+    public void setmTime(int mTime) {
+        this.mTime = mTime;
+    }
+
 
 }

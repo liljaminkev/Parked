@@ -16,6 +16,10 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import com.firebase.geofire.GeoFire;
+import com.firebase.geofire.GeoLocation;
+import com.firebase.geofire.GeoQuery;
+import com.firebase.geofire.GeoQueryEventListener;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
@@ -29,6 +33,11 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import static com.parked.parked.R.string.findMyLocation;
 
@@ -39,6 +48,14 @@ import java.io.IOException;
  */
 
 public class NavFragment extends SupportMapFragment implements LocationListener {
+
+    static DatabaseReference mFirebaseRef = FirebaseDatabase.getInstance().getReference();
+    DatabaseReference mCondRef = mFirebaseRef.child("condition");
+
+    //geofire
+    private GeoFire geoFire;
+    private GeoQuery geoQuery;
+
 
     private GoogleMap mMap;
     private Location mCurrentLocation;
@@ -96,14 +113,32 @@ public class NavFragment extends SupportMapFragment implements LocationListener 
 
         });
 
+        // setup GeoFire
+        this.geoFire = new GeoFire(FirebaseDatabase.getInstance(app).getReferenceFromUrl(GEO_FIRE_REF));
+        // radius in km
+        this.geoQuery = this.geoFire.queryAtLocation(INITIAL_CENTER, 1);
+
     }
 
     @Override
     public void onStart() {
         super.onStart();
-
         //getActivity().invalidateOptionsMenu();
         mClient.connect();
+
+
+        mCondRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                String text = dataSnapshot.getValue(String.class);
+                //mCondRef = text;
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        })
     }
 
     @Override
