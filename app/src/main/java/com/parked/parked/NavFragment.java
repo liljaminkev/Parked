@@ -114,9 +114,9 @@ public class NavFragment extends SupportMapFragment implements LocationListener 
         });
 
         // setup GeoFire
-        this.geoFire = new GeoFire(FirebaseDatabase.getInstance(app).getReferenceFromUrl(GEO_FIRE_REF));
+        //this.geoFire = new GeoFire(FirebaseDatabase.getInstance(app).getReferenceFromUrl(GEO_FIRE_REF));
         // radius in km
-        this.geoQuery = this.geoFire.queryAtLocation(INITIAL_CENTER, 1);
+        //this.geoQuery = this.geoFire.queryAtLocation(INITIAL_CENTER, 1);
 
     }
 
@@ -126,7 +126,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener 
         //getActivity().invalidateOptionsMenu();
         mClient.connect();
 
-
+        /*
         mCondRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -138,7 +138,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener 
             public void onCancelled(DatabaseError databaseError) {
 
             }
-        })
+        });*/
     }
 
     @Override
