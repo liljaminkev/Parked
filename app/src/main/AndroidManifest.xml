@@ -24,17 +24,17 @@
 
         <activity
             android:name=".NavActivity"
-            android:label="Map" />
-        <activity
-            android:name=".SigninActivity"
-            android:windowSoftInputMode="stateVisible|adjustPan">
+            android:label="Parked">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".fireBaseTest"></activity>
+        <activity
+            android:name=".SigninActivity"
+            android:windowSoftInputMode="stateVisible|adjustPan" />
+        <activity android:name=".fireBaseTest" />
     </application>
 
 </manifest>

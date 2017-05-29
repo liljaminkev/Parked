@@ -4,8 +4,8 @@
 
     <item
         android:id="@+id/action_locate"
-        android:icon="@android:drawable/ic_menu_compass"
-        android:title="@string/findMyLocation"
         android:enabled="false"
-        app:showAsAction="ifRoom"/>
+        android:icon="@android:drawable/arrow_down_float"
+        android:title="@string/findMyLocation"
+        app:showAsAction="always" />
 </menu>
