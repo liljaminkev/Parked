@@ -107,6 +107,7 @@ public class GeoQuery {
         this.radius = radius * 1000;
     }
 
+
     private boolean locationIsInQuery(GeoLocation location) {
         return GeoUtils.distance(location, center) <= this.radius;
     }
@@ -220,9 +221,15 @@ public class GeoQuery {
     }
 
     private void setupQueries() {
+
         Set<GeoHashQuery> oldQueries = (this.queries == null) ? new HashSet<GeoHashQuery>() : this.queries;
         Set<GeoHashQuery> newQueries = GeoHashQuery.queriesAtLocation(center, radius);
         this.queries = newQueries;
+
+        /** for all geohashquerries check to see if it is in newqueries
+         *  if the query is not in newqueries
+         *  get the query from the
+         */
         for (GeoHashQuery query: oldQueries) {
             if (!newQueries.contains(query)) {
                 firebaseQueries.get(query).removeEventListener(this.childEventLister);
@@ -240,6 +247,8 @@ public class GeoQuery {
                 firebaseQueries.put(query, firebaseQuery);
             }
         }
+
+
         for(Map.Entry<String, LocationInfo> info: this.locationInfos.entrySet()) {
             LocationInfo oldLocationInfo = info.getValue();
             this.updateLocationInfo(info.getKey(), oldLocationInfo.location);

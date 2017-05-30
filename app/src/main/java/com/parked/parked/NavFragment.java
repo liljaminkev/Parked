@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 
 import android.os.Bundle;
+import android.renderscript.Sampler;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -25,15 +26,20 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -72,7 +78,9 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
     private GeoQuery mGeoQuery;
 
     private Map<String,Marker> markers; //holds markers found at current location
-
+    private Map<String, ValueEventListener> mSpotListeners;
+    private Map<String,ParkingSpotInformation> mParkingSpots;
+    final FirebaseDatabase mDatabase = FirebaseDatabase.getInstance();
 
 
 
@@ -91,8 +99,8 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
         /**
          * Set up firebase and crate geofire object
          */
-        mGeoFireRef = FirebaseDatabase.getInstance().getReference().child("geoFire");
-        mFirebaseSpotRef = FirebaseDatabase.getInstance().getReference().child("_spots");
+        mGeoFireRef = mDatabase.getReference().child("geoFire");
+        mFirebaseSpotRef = mDatabase.getReference().child("_spots");
         mGeoFire = new GeoFire(mGeoFireRef);
 
         /**
@@ -268,10 +276,41 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
 
 
     @Override
-    public void onKeyEntered(String key, GeoLocation location) {
+    public void onKeyEntered(final String key, final GeoLocation location) {
 
-        Marker marker = mMap.addMarker(new MarkerOptions().position(new LatLng(location.latitude, location.longitude)));
-        markers.put(key, marker);
+        ValueEventListener listener;
+
+        mFirebaseSpotRef.child(key).addValueEventListener(listener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                ParkingSpotInformation spot = dataSnapshot.getValue(ParkingSpotInformation.class);
+                Marker marker;
+                if(spot.getStatus() == 1){
+                    marker = mMap.addMarker(new MarkerOptions()
+                            .position(new LatLng(location.latitude, location.longitude))
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                }
+                else if(spot.getStatus() == 2){
+                    marker = mMap.addMarker(new MarkerOptions()
+                            .position(new LatLng(location.latitude, location.longitude))
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
+                }
+                else{
+                    marker = mMap.addMarker(new MarkerOptions()
+                            .position(new LatLng(location.latitude, location.longitude))
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                }
+                markers.put(key, marker);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+        //mSpotListeners.put(key, listener);
+
+
     }
 
     @Override
@@ -280,6 +319,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
         if (marker != null) {
             marker.remove();
             markers.remove(key);
+            //mFirebaseSpotRef.child(key).removeEventListener(mSpotListeners.get(key));
         }
     }
 
@@ -297,5 +337,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
     public void onGeoQueryError(DatabaseError error) {
 
     }
+
+
 
 }
