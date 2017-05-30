@@ -7,9 +7,15 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 
 import android.os.Bundle;
-import android.support.design.widget.NavigationView;
+import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 
+import com.firebase.geofire.GeoFire;
+import com.firebase.geofire.GeoLocation;
+import com.firebase.geofire.GeoQuery;
+import com.firebase.geofire.GeoQueryEventListener;
+import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
@@ -19,27 +25,54 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+
+import java.util.HashMap;
+import java.util.Map;
 
 
 /**
  * Created by kevin on 5/7/17.
  */
 
-public class NavFragment extends SupportMapFragment implements LocationListener {
+public class NavFragment extends SupportMapFragment implements LocationListener, GeoQueryEventListener {
 
+    //Google Maps assets
     private GoogleMap mMap;
-    private Location mCurrentLocation;
-    private Boolean mLocationPermissionGranted;
     private GoogleApiClient mClient;
-    private static final String TAG = "NavFragment";
-    private static final int REQUEST_LOCATION_PERMISSIONS = 0;
 
+    //User location Assets
+    private Location mCurrentLocation;
+
+    //User permission asets
+    private static final int REQUEST_LOCATION_PERMISSIONS = 0;
     private static final String[] LOCATION_PERMISSIONS = new String[]{
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION};
+
+    private static final String TAG = "NavFragment";
+
+
+    //Firebase assets
+    private DatabaseReference mGeoFireRef;
+    private DatabaseReference mFirebaseSpotRef;
+
+    //geofire assets
+    private static final int INITIAL_ZOOM_LEVEL = 17;
+    private Circle mSearchCircle;
+    private GeoFire mGeoFire;
+    private GeoQuery mGeoQuery;
+
+    private Map<String,Marker> markers; //holds markers found at current location
+
 
 
 
@@ -55,26 +88,72 @@ public class NavFragment extends SupportMapFragment implements LocationListener 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        /**
+         * Set up firebase and crate geofire object
+         */
+        mGeoFireRef = FirebaseDatabase.getInstance().getReference().child("geoFire");
+        mFirebaseSpotRef = FirebaseDatabase.getInstance().getReference().child("_spots");
+        mGeoFire = new GeoFire(mGeoFireRef);
 
-        mClient = new GoogleApiClient.Builder(getActivity()).addApi(LocationServices.API)
-                .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
-                    @Override
-                    public void onConnected(Bundle bundle) {
-                        startLocationUpdates();
+        /**
+         * setup markers database
+         */
 
-                        if (hasLocationPermission()) {
-                            findLocation();
-                            updateUI();
-                        } else
-                            requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
+        markers = new HashMap<String, Marker>();
 
-                    }
+        if(mClient == null)
+        {
+            mClient = new GoogleApiClient.Builder(getActivity())
+                    .addApi(LocationServices.API)
+                    .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
+                        @Override
+                        public void onConnected(Bundle bundle) {
 
-                    @Override
-                    public void onConnectionSuspended(int i) {
+                            /**
+                             * Check or request permissions
+                             */
+                            if (ContextCompat.checkSelfPermission(getActivity(), LOCATION_PERMISSIONS[0])
+                                    == PackageManager.PERMISSION_GRANTED) {
+                                startLocationUpdates();
 
-                    }
-                }).build();
+
+                                /**
+                                 /setup google look at last location
+                                 /
+                                 */
+
+                                mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mClient);
+
+                                if (mCurrentLocation != null) {
+
+                                    /**
+                                     * setup a GeoQuery and listener at c
+                                     */
+                                    mGeoQuery = mGeoFire.queryAtLocation(new GeoLocation(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()), 0.1);
+                                    mGeoQuery.addGeoQueryEventListener(NavFragment.this);
+                                    updateUI();
+                                }
+                            } else {
+                                requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
+                            }
+
+
+                        }
+
+                        @Override
+                        public void onConnectionSuspended(int i) {
+
+                        }
+                    })
+                    .addOnConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
+                        @Override
+                        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+                            Log.d(TAG, "Failed to connect to Google Api Client");
+                        }
+                    })
+                    .build();
+        }
+
 
         getMapAsync(new OnMapReadyCallback() {
             @Override
@@ -85,13 +164,10 @@ public class NavFragment extends SupportMapFragment implements LocationListener 
 
         });
 
-        /*
-        /setup GeoFire
-        /
-        */
-        //this.geoFire = new GeoFire(FirebaseDatabase.getInstance(app).getReferenceFromUrl(GEO_FIRE_REF));
-        // radius in km
-        //this.geoQuery = this.geoFire.queryAtLocation(INITIAL_CENTER, 1);
+
+    }
+
+    public void setupGeoFire(){
 
     }
 
@@ -99,7 +175,6 @@ public class NavFragment extends SupportMapFragment implements LocationListener 
     public void onStart() {
         super.onStart();
         mClient.connect();
-
     }
 
     @Override
@@ -122,97 +197,43 @@ public class NavFragment extends SupportMapFragment implements LocationListener 
         }
     }
 
-/*
 
-
-    /**Menu Items
-    //
-    //
-    */
-
-    /*
-    @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
-        //inflater.inflate(R.menu.menu, menu);
-
-        //MenuItem findLocation = menu.findItem(R.id.action_locate);
-        //findLocation.setEnabled(mClient.isConnected());
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_locate:
-                if (hasLocationPermission()){
-                    findLocation();
-                    updateUI();
-                }
-                else
-                    requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-    }*/
-
-
-    //
-    //Device permissions
-    //
-    //
+    /**
+     * OnRequestPermissionsResult
+     * returns if permissions have bee
+     * @param requestCode
+     * @param permissions
+     * @param grantedResults
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantedResults) {
         switch (requestCode) {
             case REQUEST_LOCATION_PERMISSIONS:
-                if (hasLocationPermission()) {
-                    findLocation();
+                if (grantedResults.length > 0  && grantedResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startLocationUpdates();
                 }
             default:
                 super.onRequestPermissionsResult(requestCode, permissions, grantedResults);
         }
     }
 
-    private boolean hasLocationPermission() {
-        int result = ContextCompat.checkSelfPermission(getActivity(), LOCATION_PERMISSIONS[0]);
 
-        return result == PackageManager.PERMISSION_GRANTED;
-    }
-
-
-    private void findLocation() {
-
-        if (ContextCompat.checkSelfPermission(getActivity(), LOCATION_PERMISSIONS[0])
-                == PackageManager.PERMISSION_GRANTED) {
-            mLocationPermissionGranted = true;
-        } else {
-            requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
-        }
-
-        if (mLocationPermissionGranted) {
-            mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mClient);
-            updateUI();
-        }
-    }
 
     private void updateUI() {
         if (mMap == null) {
             return;
         }
+        LatLng latlng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
 
-        LatLng myLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
-
-
-        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(myLocation, 18);
+        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(latlng, INITIAL_ZOOM_LEVEL);
         mMap.moveCamera(update);
-
     }
 
     //start getting gps updates
     protected void startLocationUpdates() {
         LocationRequest request = LocationRequest.create();
         request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        request.setInterval(1000);
+        request.setInterval(500);
 
         LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, this);
     }
@@ -226,10 +247,55 @@ public class NavFragment extends SupportMapFragment implements LocationListener 
     @Override
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
+        mGeoQuery.setCenter(new GeoLocation(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()));
         updateUI();
     }
 
 
 
+
+    /**
+     *
+     *
+     * GEOQUERY Assets
+     *
+     */
+
+    /**
+     *
+     *
+     */
+
+
+    @Override
+    public void onKeyEntered(String key, GeoLocation location) {
+
+        Marker marker = mMap.addMarker(new MarkerOptions().position(new LatLng(location.latitude, location.longitude)));
+        markers.put(key, marker);
+    }
+
+    @Override
+    public void onKeyExited(String key) {
+        Marker marker = markers.get(key);
+        if (marker != null) {
+            marker.remove();
+            markers.remove(key);
+        }
+    }
+
+    @Override
+    public void onKeyMoved(String key, GeoLocation location) {
+
+    }
+
+    @Override
+    public void onGeoQueryReady() {
+
+    }
+
+    @Override
+    public void onGeoQueryError(DatabaseError error) {
+
+    }
 
 }

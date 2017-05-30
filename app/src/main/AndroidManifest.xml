@@ -34,7 +34,6 @@
         <activity
             android:name=".SigninActivity"
             android:windowSoftInputMode="stateVisible|adjustPan" />
-        <activity android:name=".fireBaseTest" />
     </application>
 
 </manifest>
