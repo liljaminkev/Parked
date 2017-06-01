@@ -2,7 +2,9 @@ package com.parked.parked;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -10,6 +12,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.ads.AdRequest;
@@ -20,6 +23,8 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+
+import org.w3c.dom.Text;
 
 public class SigninActivity extends AppCompatActivity {
     // Adview
@@ -40,8 +45,18 @@ public class SigninActivity extends AppCompatActivity {
     private Button signInButton;
     private Button registerButton;
 
+    // textview
+    private TextView mMessage;
+
     // Progress dialog
     public ProgressDialog mProgressDialog;
+
+    private static final String[] LOCATION_PERMISSIONS = new String[]{
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION};
+
+    private static final int REQUEST_LOCATION_PERMISSIONS = 0;
+
 
 
     @Override
@@ -50,9 +65,13 @@ public class SigninActivity extends AppCompatActivity {
         //set view to activity signin
         setContentView(R.layout.activity_signin);
 
+
+
+
         // View assets
         mEmailField = (EditText) findViewById(R.id.field_email);
         mPasswordField = (EditText) findViewById(R.id.field_password);
+        mMessage = (TextView) findViewById(R.id.messageDialog);
 
 
         // initialize advertisements
@@ -64,6 +83,7 @@ public class SigninActivity extends AppCompatActivity {
 
         // Buttons
         signInButton = (Button) findViewById(R.id.sign_in_button);
+        signInButton.setEnabled(false);
 
         signInButton.setOnClickListener(new View.OnClickListener(){
             @Override
@@ -73,6 +93,7 @@ public class SigninActivity extends AppCompatActivity {
         });
 
         registerButton = (Button) findViewById(R.id.create_account_button);
+        registerButton.setEnabled(false);
 
 
         registerButton.setOnClickListener(new View.OnClickListener(){
@@ -103,6 +124,16 @@ public class SigninActivity extends AppCompatActivity {
             }
         };
 
+        if (ActivityCompat.checkSelfPermission(this, LOCATION_PERMISSIONS[0])
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
+                    REQUEST_LOCATION_PERMISSIONS);
+        }else{
+            signInButton.setEnabled(true);
+            registerButton.setEnabled(true);
+        }
+
+
 
 
     }
@@ -119,7 +150,9 @@ public class SigninActivity extends AppCompatActivity {
     public void onStop(){
         super.onStop();
         mAuth.removeAuthStateListener(mAuthListener);
+
     }
+
 
     public void createAccount(String email, String password){
         Log.d(TAG, "createAccount:" + email);
@@ -222,6 +255,26 @@ public class SigninActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * OnRequestPermissionsResult
+     * returns if permissions have bee
+     * @param requestCode
+     * @param permissions
+     * @param grantedResults
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantedResults) {
+        switch (requestCode) {
+            case REQUEST_LOCATION_PERMISSIONS:
+                if (grantedResults.length > 0  && grantedResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    signInButton.setEnabled(true);
+                    registerButton.setEnabled(true);
+                }
+            default:
+                mMessage.setText(R.string.need_permissions);
+                super.onRequestPermissionsResult(requestCode, permissions, grantedResults);
+        }
+    }
 
 
 }

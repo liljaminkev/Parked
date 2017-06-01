@@ -4,6 +4,7 @@ package com.parked.parked;
 import android.Manifest;
 
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 
 import android.os.Bundle;
@@ -28,6 +29,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -49,11 +51,13 @@ import java.util.Map;
  * Created by kevin on 5/7/17.
  */
 
-public class NavFragment extends SupportMapFragment implements LocationListener, GeoQueryEventListener {
+public class NavFragment extends SupportMapFragment implements LocationListener, GeoQueryEventListener, GoogleMap.OnCameraMoveListener {
 
     //Google Maps assets
     private GoogleMap mMap;
     private GoogleApiClient mClient;
+    //private Circle searchCircle;
+
 
     //User location Assets
     private Location mCurrentLocation;
@@ -72,8 +76,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
     private DatabaseReference mFirebaseSpotRef;
 
     //geofire assets
-    private static final int INITIAL_ZOOM_LEVEL = 17;
-    private Circle mSearchCircle;
+    private static final int INITIAL_ZOOM_LEVEL = 19;
     private GeoFire mGeoFire;
     private GeoQuery mGeoQuery;
 
@@ -108,6 +111,7 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
          */
 
         markers = new HashMap<String, Marker>();
+        mSpotListeners = new HashMap<String, ValueEventListener>();
 
         if(mClient == null)
         {
@@ -124,9 +128,8 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
                                     == PackageManager.PERMISSION_GRANTED) {
                                 startLocationUpdates();
 
-
                                 /**
-                                 /setup google look at last location
+                                 /setup map at last location
                                  /
                                  */
 
@@ -139,13 +142,9 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
                                      */
                                     mGeoQuery = mGeoFire.queryAtLocation(new GeoLocation(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()), 0.1);
                                     mGeoQuery.addGeoQueryEventListener(NavFragment.this);
-                                    updateUI();
                                 }
-                            } else {
-                                requestPermissions(LOCATION_PERMISSIONS, REQUEST_LOCATION_PERMISSIONS);
+
                             }
-
-
                         }
 
                         @Override
@@ -166,16 +165,33 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
         getMapAsync(new OnMapReadyCallback() {
             @Override
             public void onMapReady(GoogleMap googleMap) {
+                CameraUpdate camupdate;
                 mMap = googleMap;
-                mMap.setMyLocationEnabled(true);
+                mMap.setOnCameraMoveListener(NavFragment.this);
+                if (ContextCompat.checkSelfPermission(getActivity(), LOCATION_PERMISSIONS[0])
+                        == PackageManager.PERMISSION_GRANTED) {
+                    if(mCurrentLocation != null){
+                        LatLng latlng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+                        camupdate = CameraUpdateFactory.newLatLngZoom(latlng, INITIAL_ZOOM_LEVEL);
+                        mMap.moveCamera(camupdate);
+                    }
+                    else{
+                        LatLng sydney = new LatLng(-33.852, 151.211);
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,INITIAL_ZOOM_LEVEL));
+                    }
+                    mMap.setMyLocationEnabled(true);
+
+
+
+                }
+                //searchCircle = mMap.addCircle(new CircleOptions().center(new LatLng(37.4,-122.1)).radius(1000));
+                //searchCircle.setFillColor(Color.argb(66, 255, 0, 255));
+                //searchCircle.setStrokeColor(Color.argb(66, 0, 0, 0));
+
             }
 
         });
 
-
-    }
-
-    public void setupGeoFire(){
 
     }
 
@@ -205,44 +221,12 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
         }
     }
 
-
-    /**
-     * OnRequestPermissionsResult
-     * returns if permissions have bee
-     * @param requestCode
-     * @param permissions
-     * @param grantedResults
-     */
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantedResults) {
-        switch (requestCode) {
-            case REQUEST_LOCATION_PERMISSIONS:
-                if (grantedResults.length > 0  && grantedResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    startLocationUpdates();
-                }
-            default:
-                super.onRequestPermissionsResult(requestCode, permissions, grantedResults);
-        }
-    }
-
-
-
-    private void updateUI() {
-        if (mMap == null) {
-            return;
-        }
-        LatLng latlng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
-
-        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(latlng, INITIAL_ZOOM_LEVEL);
-        mMap.moveCamera(update);
-    }
-
     //start getting gps updates
     protected void startLocationUpdates() {
         LocationRequest request = LocationRequest.create();
         request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         request.setInterval(500);
-
+        request.setSmallestDisplacement(1);
         LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, this);
     }
 
@@ -255,32 +239,27 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
     @Override
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
-        mGeoQuery.setCenter(new GeoLocation(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()));
-        updateUI();
+        //mGeoQuery.setCenter(new GeoLocation(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude()));
+        LatLng latlng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+
+        CameraUpdate update = CameraUpdateFactory.newLatLng(latlng);
+        mMap.moveCamera(update);
+
+        Log.d(TAG,"Location Changed." + mCurrentLocation);
     }
 
 
 
 
     /**
-     *
-     *
      * GEOQUERY Assets
      *
      */
 
-    /**
-     *
-     *
-     */
-
-
     @Override
     public void onKeyEntered(final String key, final GeoLocation location) {
 
-        ValueEventListener listener;
-
-        mFirebaseSpotRef.child(key).addValueEventListener(listener = new ValueEventListener() {
+        ValueEventListener listener = new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 ParkingSpotInformation spot = dataSnapshot.getValue(ParkingSpotInformation.class);
@@ -307,19 +286,22 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
             public void onCancelled(DatabaseError databaseError) {
 
             }
-        });
-        //mSpotListeners.put(key, listener);
+        };
 
+        mFirebaseSpotRef.child(key).addValueEventListener(listener);
 
+        mSpotListeners.put(key, listener);
     }
 
     @Override
     public void onKeyExited(String key) {
         Marker marker = markers.get(key);
         if (marker != null) {
+            Log.d(TAG, "removing " + key);
             marker.remove();
             markers.remove(key);
-            //mFirebaseSpotRef.child(key).removeEventListener(mSpotListeners.get(key));
+            mFirebaseSpotRef.child(key).removeEventListener(mSpotListeners.get(key));
+            mSpotListeners.remove(key);
         }
     }
 
@@ -338,6 +320,21 @@ public class NavFragment extends SupportMapFragment implements LocationListener,
 
     }
 
+    @Override
+    public void onCameraMove(){
+        LatLng target = mMap.getCameraPosition().target;
+        double radius = zoomLevelToRadius(mMap.getCameraPosition().zoom);
+        //searchCircle.setCenter(target);
+        //searchCircle.setRadius(radius);
+        mGeoQuery.setCenter(new GeoLocation(target.latitude, target.longitude));
+        mGeoQuery.setRadius(radius/1000);
+        //Log.d(TAG, "Camera radius Changed" + radius);
+    }
+
+    private double zoomLevelToRadius(double zoomLevel) {
+        // Approximation to fit circle into view
+        return 16384000/Math.pow(2, zoomLevel);
+    }
 
 
 }
